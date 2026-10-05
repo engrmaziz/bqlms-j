@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check that the app exists
+        id: app
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v5
+        if: steps.app.outputs.present == 'true'
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Install dependencies
+        if: steps.app.outputs.present == 'true'
+        run: |
+          corepack enable 2>/dev/null || npm install -g pnpm
+          pnpm install --frozen-lockfile
+
+      - name: Start local services
+        if: steps.app.outputs.present == 'true'
+        run: |
+          cp -n .env.example .env
+          docker compose up -d --wait
+
+      - name: Prepare environment
+        if: steps.app.outputs.present == 'true'
+        run: pnpm run --if-present ci:prepare
+
+      - name: Verify
+        if: steps.app.outputs.present == 'true'
+        run: pnpm verify
+
+      - name: End-to-end tests
+        if: steps.app.outputs.present == 'true'
+        run: |
+          if [ -d tests/e2e ] && ls tests/e2e/*.spec.ts >/dev/null 2>&1; then
+            pnpm exec playwright install --with-deps chromium
+            pnpm test:e2e
+          else
+            echo "No end-to-end tests yet."
+          fi
