@@ -104,3 +104,17 @@ The first two lines, exactly:
 Then these headings, in this order: Finished stages (one line each),
 Installed versions, Deviations, What remains (only if partial), Unverified
 here, Operator actions, Notes for the next stage.
+
+## Architecture rules
+  1. One Next.js app, modular monolith, single college. No tenant concept.
+  2. Zero-cost, no-card rule: never add a service that needs a paid plan or a payment method on file. Every external service sits behind an interface in src/lib/providers/*, has a free default, a fake for tests, an on/off flag, and a hard usage cap that returns QUOTA_EXCEEDED.
+  3. Request handlers are stateless serverless functions. Do no work after the response is sent. No WebSockets or SSE. No in-memory state shared across requests except short-lived caches.
+  4. Requests are a budget: the host caps monthly function invocations and CPU, and a project that exceeds them is paused. No polling while a tab is hidden, no per-keystroke requests, cache whatever is cacheable, keep server rendering light.
+  5. Every mutation goes through defineAction/defineRoute. Services never read cookies or headers and never accept a user id from client input.
+  6. Side effects (email, push, provider calls) run only in jobs enqueued in the same DB transaction as the state change.
+  7. Every job step finishes in under 30 seconds, is idempotent, and resumes from a checkpoint.
+  8. Only course material is ever sent to an LLM; student-authored content never is. LLM output needs schema validation and human approval before students see it.
+  9. Money = integer minor units + currency. Time = timestamptz UTC. IDs = UUIDv7 generated app-side.
+  10. The database is small (500 MB): no blobs or base64 in Postgres, bounded jsonb, every append-only table has a retention job.
+  11. No `any`, no non-null assertions, no floating promises, no stubs. If blocked, stop and report.
+  12. A stage is done only when `pnpm verify` is green.

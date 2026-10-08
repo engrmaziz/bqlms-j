@@ -1,0 +1,30 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"a11y": {
+				"noSvgWithoutTitle": "off"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"css": {
+		"parser": {
+			"cssModules": true
+		},
+		"formatter": {
+			"enabled": false
+		},
+		"linter": {
+			"enabled": false
+		}
+	},
+	"files": {
+		"includes": ["**", "!**/.next/**/*", "!**/public/**/*", "!**/*.css"]
+	}
+}

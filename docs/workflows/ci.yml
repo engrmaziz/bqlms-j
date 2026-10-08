@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lms
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Copy env
+        run: cp -n .env.example .env
+      - name: Wait for services
+        run: docker compose up -d --wait
+      - name: Prepare CI
+        run: pnpm run --if-present ci:prepare
+      - name: Verify
+        run: pnpm verify
+      - name: E2E Tests
+        run: |
+          if [ -d "tests/e2e" ] && [ "$(ls -A tests/e2e)" ]; then
+            pnpm test:e2e
+          fi
