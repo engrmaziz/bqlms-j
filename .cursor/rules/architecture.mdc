@@ -1,0 +1,6 @@
+---
+description: Always apply architecture rules
+globs: *
+alwaysApply: true
+---
+Follow the rules documented in AGENTS.md at the root of the repository.
